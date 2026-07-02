@@ -102,7 +102,7 @@ async function setTab(key) {
 
 onMounted(async () => {
   games.value = await api.getGames();
-  const gameEmojis = { Wordle: '🟩', Connections: '🔗', 'Mini Crossword': '✏️', Strands: '🧵' };
+  const gameEmojis = { Wordle: '🟩', Connections: '🔗' };
   games.value.forEach(g => {
     tabs.value.push({ key: g.name, label: `${gameEmojis[g.name] || '🎮'} ${g.name}` });
   });

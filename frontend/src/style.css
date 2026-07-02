@@ -361,5 +361,3 @@ tr:hover td { background: var(--surface-alt); }
 }
 .game-wordle      { background: #dcfce7; }
 .game-connections { background: #fce7f3; }
-.game-crossword   { background: #dbeafe; }
-.game-strands     { background: #fef3c7; }

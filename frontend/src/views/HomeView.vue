@@ -127,16 +127,11 @@ function rankClass(rank) {
 }
 
 function gameEmoji(game) {
-  const map = { Wordle: '🟩', Connections: '🔗', 'Mini Crossword': '✏️', Strands: '🧵' };
+  const map = { Wordle: '🟩', Connections: '🔗' };
   return map[game] || '🎮';
 }
 function gameIconClass(game) {
-  const map = {
-    Wordle: 'game-wordle',
-    Connections: 'game-connections',
-    'Mini Crossword': 'game-crossword',
-    Strands: 'game-strands',
-  };
+  const map = { Wordle: 'game-wordle', Connections: 'game-connections' };
   return map[game] || '';
 }
 

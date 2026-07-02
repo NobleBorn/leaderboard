@@ -41,8 +41,6 @@ const seedGame = db.prepare(`INSERT OR IGNORE INTO games (name, scoring_type) VA
 [
   ['Wordle', 'direct'],
   ['Connections', 'direct'],
-  ['Mini Crossword', 'ranked'],
-  ['Strands', 'direct'],
 ].forEach(([name, type]) => seedGame.run(name, type));
 
 module.exports = db;

@@ -266,7 +266,6 @@ async function saveEdit(s) {
   saving.value = true;
   try {
     const updated = await api.updateSubmission(s.id, raw);
-    // Re-fetch: editing a ranked game (e.g. Mini Crossword) can shift other players' scores that day too.
     submissions.value = await api.getSubmissions();
     cancelEdit();
     subAlert.value = { msg: `Updated ${updated.participant}'s ${updated.game} result to ${updated.score} pts.`, type: 'success' };

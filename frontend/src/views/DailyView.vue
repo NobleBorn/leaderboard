@@ -66,7 +66,7 @@ const today   = new Date().toISOString().slice(0, 10);
 const loading = ref(true);
 const grouped = ref({});
 
-const GAME_ORDER = ['Wordle', 'Connections', 'Mini Crossword', 'Strands'];
+const GAME_ORDER = ['Wordle', 'Connections'];
 
 async function load() {
   loading.value = true;
@@ -94,14 +94,14 @@ function goToday() {
 }
 
 function gameEmoji(game) {
-  return { Wordle: '🟩', Connections: '🔗', 'Mini Crossword': '✏️', Strands: '🧵' }[game] || '🎮';
+  return { Wordle: '🟩', Connections: '🔗' }[game] || '🎮';
 }
 function gameIconClass(game) {
-  return { Wordle: 'game-wordle', Connections: 'game-connections', 'Mini Crossword': 'game-crossword', Strands: 'game-strands' }[game] || '';
+  return { Wordle: 'game-wordle', Connections: 'game-connections' }[game] || '';
 }
 
 function pointsBadge(score, game) {
-  const max = { Wordle: 6, Connections: 600, 'Mini Crossword': 5, Strands: 5 }[game] || 5;
+  const max = { Wordle: 6, Connections: 10 }[game] || 5;
   if (score === max) return 'badge badge-green';
   if (score >= max * 0.6) return 'badge badge-yellow';
   if (score <= 0) return 'badge badge-red';

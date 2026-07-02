@@ -1,12 +1,8 @@
 /**
  * Scoring logic for each game type.
  *
- * Direct-scored games (Wordle, Connections, Strands) produce a score
- * at submission time from the raw result string.
- *
- * Ranked games (Mini Crossword) produce a rank-based score that is
- * recomputed for all submissions on a given date whenever a new entry
- * arrives.
+ * Direct-scored games (Wordle, Connections) produce a score at
+ * submission time from the raw result string.
  */
 
 /**
@@ -27,12 +23,11 @@ function scoreWordle(rawResult) {
  *   e.g. "yellow,green,blue,purple;2"  or  "yellow,green;3"  or  ";1" (nothing solved yet)
  * Mistakes range 0–3: a 4th wrong guess ends the round and should be submitted as "failed".
  * Colors are weighted by difficulty (yellow easiest → purple hardest):
- *   Yellow = 50, Green = 100, Blue = 150, Purple = 200
- * Score = sum of solved-group points − (mistakes × 25),
- *         plus a +100 bonus for solving all four groups.
+ *   Yellow = 1, Green = 2, Blue = 3, Purple = 4
+ * Score = sum of solved-group points − mistakes, clamped between 0 and 10.
  * "failed" always scores 0, regardless of any partial progress.
  */
-const CONNECTIONS_GROUP_POINTS = { yellow: 50, green: 100, blue: 150, purple: 200 };
+const CONNECTIONS_GROUP_POINTS = { yellow: 1, green: 2, blue: 3, purple: 4 };
 
 function scoreConnections(rawResult) {
   const trimmed = rawResult.trim();
@@ -68,69 +63,8 @@ function scoreConnections(rawResult) {
 
   const uniqueSolved = new Set(solvedColors);
   const groupPoints = [...uniqueSolved].reduce((sum, color) => sum + CONNECTIONS_GROUP_POINTS[color], 0);
-  const totalSolved = uniqueSolved.size;
-  const bonus = totalSolved === 4 ? 100 : 0;
 
-  return groupPoints - mistakes * 25 + bonus;
-}
-
-/**
- * Strands: "no hints" | "with hints" | "failed"
- * no hints = 5, with hints = 3, failed = 0
- */
-function scoreStrands(rawResult) {
-  switch (rawResult.trim().toLowerCase()) {
-    case 'no hints':   return 5;
-    case 'with hints': return 3;
-    case 'failed':     return 0;
-    default:
-      throw new Error(`Invalid Strands result: "${rawResult}". Expected "no hints", "with hints", or "failed".`);
-  }
-}
-
-/**
- * Mini Crossword: "M:SS" or "MM:SS" (completion time)
- * Returns time in total seconds. Score is computed separately via rankMiniCrossword().
- * Returns -1 for "failed" / did not complete.
- */
-function parseMiniCrosswordTime(rawResult) {
-  const lower = rawResult.trim().toLowerCase();
-  if (lower === 'failed' || lower === 'dnf') return -1;
-  const match = rawResult.trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) {
-    throw new Error(`Invalid Mini Crossword time: "${rawResult}". Expected M:SS or MM:SS (e.g. 3:45) or "failed".`);
-  }
-  const minutes = parseInt(match[1], 10);
-  const seconds = parseInt(match[2], 10);
-  if (seconds >= 60) throw new Error(`Seconds must be 0–59, got ${seconds}.`);
-  return minutes * 60 + seconds;
-}
-
-/**
- * Given an array of { id, totalSeconds } for all submissions on a day,
- * compute rank-based scores.
- * Completions rank 1st→5pts, 2nd→4, 3rd→3, 4th→2, else→1.
- * Failed (totalSeconds === -1) = 0 pts.
- * Returns a Map of submission id → score.
- */
-function rankMiniCrossword(entries) {
-  const scores = new Map();
-
-  // Sort completions by time ascending; failed entries go last
-  const completed = entries
-    .filter(e => e.totalSeconds >= 0)
-    .sort((a, b) => a.totalSeconds - b.totalSeconds);
-
-  const rankPoints = [5, 4, 3, 2]; // rank 1–4
-  completed.forEach((entry, index) => {
-    scores.set(entry.id, index < rankPoints.length ? rankPoints[index] : 1);
-  });
-
-  entries
-    .filter(e => e.totalSeconds < 0)
-    .forEach(e => scores.set(e.id, 0));
-
-  return scores;
+  return Math.max(0, Math.min(10, groupPoints - mistakes));
 }
 
 /**
@@ -141,10 +75,9 @@ function computeDirectScore(gameName, rawResult) {
   switch (gameName) {
     case 'Wordle':      return scoreWordle(rawResult);
     case 'Connections': return scoreConnections(rawResult);
-    case 'Strands':     return scoreStrands(rawResult);
     default:
       throw new Error(`Unknown direct-scored game: ${gameName}`);
   }
 }
 
-module.exports = { computeDirectScore, parseMiniCrosswordTime, rankMiniCrossword };
+module.exports = { computeDirectScore };

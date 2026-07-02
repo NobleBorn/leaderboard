@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { computeDirectScore, parseMiniCrosswordTime, rankMiniCrossword } = require('../scoring');
+const { computeDirectScore } = require('../scoring');
 const router = express.Router();
 
 // GET /api/submissions?date=YYYY-MM-DD
@@ -43,17 +43,11 @@ router.post('/', (req, res) => {
   // Compute score
   let score;
   try {
-    if (game.scoring_type === 'ranked') {
-      // For Mini Crossword, parse the time — actual score set after ranking
-      score = parseMiniCrosswordTime(rawResult);
-    } else {
-      score = computeDirectScore(game.name, rawResult);
-    }
+    score = computeDirectScore(game.name, rawResult);
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
 
-  // For ranked games, score stored temporarily as totalSeconds; overwritten after ranking below
   const insertStmt = db.prepare(`
     INSERT INTO submissions (participant_id, game_id, date, raw_result, score)
     VALUES (?, ?, ?, ?, ?)
@@ -69,11 +63,6 @@ router.post('/', (req, res) => {
       });
     }
     throw err;
-  }
-
-  // Re-rank all Mini Crossword submissions for this date
-  if (game.scoring_type === 'ranked') {
-    recomputeRankedScores(game.id, date);
   }
 
   const created = db.prepare(`
@@ -103,21 +92,13 @@ router.put('/:id', (req, res) => {
 
   let score;
   try {
-    if (sub.scoring_type === 'ranked') {
-      score = parseMiniCrosswordTime(rawResult);
-    } else {
-      score = computeDirectScore(sub.game_name, rawResult);
-    }
+    score = computeDirectScore(sub.game_name, rawResult);
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
 
   db.prepare('UPDATE submissions SET raw_result = ?, score = ? WHERE id = ?')
     .run(rawResult.trim(), score, sub.id);
-
-  if (sub.scoring_type === 'ranked') {
-    recomputeRankedScores(sub.game_id, sub.date);
-  }
 
   const updated = db.prepare(`
     SELECT s.id, p.name AS participant, g.name AS game, s.date, s.raw_result, s.score
@@ -129,31 +110,5 @@ router.put('/:id', (req, res) => {
 
   res.json(updated);
 });
-
-/**
- * Recompute rank-based scores for all Mini Crossword submissions on a given date.
- * We always re-derive totalSeconds from raw_result so stale rank-point values
- * in the score column don't corrupt rankings.
- */
-function recomputeRankedScores(gameId, date) {
-  const rows = db.prepare(
-    'SELECT id, raw_result FROM submissions WHERE game_id = ? AND date = ?'
-  ).all(gameId, date).map(r => ({
-    id: r.id,
-    totalSeconds: parseMiniCrosswordTime(r.raw_result),
-  }));
-
-  const scoreMap = rankMiniCrossword(rows);
-  const updateStmt = db.prepare('UPDATE submissions SET score = ? WHERE id = ?');
-
-  db.exec('BEGIN');
-  try {
-    scoreMap.forEach((pts, id) => updateStmt.run(pts, id));
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  }
-}
 
 module.exports = router;

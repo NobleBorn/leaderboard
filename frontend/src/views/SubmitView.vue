@@ -15,10 +15,11 @@
       <div class="form-group">
         <label>Your Name</label>
         <div style="display:flex;gap:.5rem">
-          <select v-model="participantId" class="form-control">
-            <option value="" disabled>Select your name…</option>
-            <option v-for="p in participants" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </select>
+          <ThemedSelect
+            v-model="participantId"
+            :options="participantOptions"
+            placeholder="Select your name…"
+          />
         </div>
         <div style="margin-top:.5rem;display:flex;gap:.5rem">
           <input
@@ -55,34 +56,39 @@
 
         <!-- Wordle -->
         <template v-if="selectedGame.name === 'Wordle'">
-          <select v-model="rawResult" class="form-control">
-            <option value="" disabled>Pick your score…</option>
-            <option v-for="o in wordleOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-          </select>
+          <ThemedSelect
+            v-model="rawResult"
+            :options="wordleOptions"
+            placeholder="Pick your score…"
+          />
         </template>
 
         <!-- Connections -->
         <template v-else-if="selectedGame.name === 'Connections'">
           <div :class="{ 'disabled-group': connectionsFailed }" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem">
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-weight:600">
-              <input type="checkbox" v-model="connectionsSolved.yellow" :disabled="connectionsFailed" /> 🟡 Yellow group — easiest (50 pts)
+              <input type="checkbox" v-model="connectionsSolved.yellow" :disabled="connectionsFailed" /> 🟡 Yellow group — easiest (1 pt)
             </label>
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-weight:600">
-              <input type="checkbox" v-model="connectionsSolved.green" :disabled="connectionsFailed" /> 🟢 Green group (100 pts)
+              <input type="checkbox" v-model="connectionsSolved.green" :disabled="connectionsFailed" /> 🟢 Green group (2 pts)
             </label>
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-weight:600">
-              <input type="checkbox" v-model="connectionsSolved.blue" :disabled="connectionsFailed" /> 🔵 Blue group (150 pts)
+              <input type="checkbox" v-model="connectionsSolved.blue" :disabled="connectionsFailed" /> 🔵 Blue group (3 pts)
             </label>
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-weight:600">
-              <input type="checkbox" v-model="connectionsSolved.purple" :disabled="connectionsFailed" /> 🟣 Purple group — hardest (200 pts)
+              <input type="checkbox" v-model="connectionsSolved.purple" :disabled="connectionsFailed" /> 🟣 Purple group — hardest (4 pts)
             </label>
           </div>
           <div :class="{ 'disabled-group': connectionsFailed }">
             <label>Mistakes</label>
-            <select v-model="connectionsMistakes" class="form-control" style="width:160px" :disabled="connectionsFailed">
-              <option value="" disabled>Pick mistakes…</option>
-              <option v-for="o in mistakesOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-            </select>
+            <div style="width:260px">
+              <ThemedSelect
+                v-model="connectionsMistakes"
+                :options="mistakesOptions"
+                placeholder="Pick mistakes…"
+                :disabled="connectionsFailed"
+              />
+            </div>
           </div>
           <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-weight:600;margin-top:.6rem">
             <input type="checkbox" v-model="connectionsFailed" /> Failed — couldn't finish the puzzle (0 pts)
@@ -91,45 +97,11 @@
             🔒 Groups and mistakes are disabled — a failed attempt always scores 0 pts.
           </p>
         </template>
-
-        <!-- Mini Crossword -->
-        <template v-else-if="selectedGame.name === 'Mini Crossword'">
-          <div style="display:flex;gap:.5rem;align-items:center">
-            <input
-              v-model="crosswordMin"
-              type="number" min="0" max="99"
-              class="form-control" style="width:80px;text-align:center"
-              placeholder="min"
-            />
-            <span style="font-weight:700;font-size:1.2rem">:</span>
-            <input
-              v-model="crosswordSec"
-              type="number" min="0" max="59"
-              class="form-control" style="width:80px;text-align:center"
-              placeholder="sec"
-            />
-            <span style="color:var(--text-muted)">or</span>
-            <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-weight:600">
-              <input type="checkbox" v-model="crosswordFailed" /> Failed / DNF
-            </label>
-          </div>
-        </template>
-
-        <!-- Strands -->
-        <template v-else-if="selectedGame.name === 'Strands'">
-          <select v-model="rawResult" class="form-control">
-            <option value="" disabled>Pick result…</option>
-            <option value="no hints">No hints used (5 pts)</option>
-            <option value="with hints">Completed with hints (3 pts)</option>
-            <option value="failed">Failed (0 pts)</option>
-          </select>
-        </template>
       </div>
 
       <!-- Preview score for direct games -->
       <div v-if="previewScore !== null" class="alert alert-info" style="margin-bottom:1.25rem">
         🎯 This will earn you <strong>{{ previewScore }} point{{ previewScore !== 1 ? 's' : '' }}</strong>
-        <span v-if="selectedGame?.name === 'Mini Crossword'">(exact score computed after all players submit)</span>
       </div>
 
       <!-- Editing existing submission? -->
@@ -177,11 +149,6 @@ const newName        = ref('');
 const submitting     = ref(false);
 const existingSubmission = ref(null);
 
-// Mini Crossword specific
-const crosswordMin   = ref('');
-const crosswordSec   = ref('');
-const crosswordFailed = ref(false);
-
 // Connections specific
 const connectionsSolved = ref({ yellow: false, green: false, blue: false, purple: false });
 const connectionsMistakes = ref('');
@@ -205,6 +172,7 @@ const mistakesOptions = [0, 1, 2, 3].map(n => ({
 }));
 
 const gameOptions = computed(() => games.value.map(g => ({ value: g.id, label: g.name })));
+const participantOptions = computed(() => participants.value.map(p => ({ value: p.id, label: p.name })));
 
 const GAME_INFO = {
   Wordle: {
@@ -215,17 +183,7 @@ const GAME_INFO = {
   Connections: {
     emoji: '🔗',
     description: 'Sort 16 words into 4 hidden groups of 4. Groups get trickier as you go — yellow is easiest, purple is hardest.',
-    scoring: 'Score = (Yellow×50) + (Green×100) + (Blue×150) + (Purple×200) − (Mistakes×25), plus a +100 bonus for solving all four groups. You get up to 3 mistakes — a 4th ends the round and should be submitted as Failed (0 pts).',
-  },
-  'Mini Crossword': {
-    emoji: '✏️',
-    description: 'A bite-sized daily crossword, raced against the clock.',
-    scoring: "Scored by daily rank: 1st = 5 pts, 2nd = 4 pts, 3rd = 3 pts, 4th = 2 pts, everyone else = 1 pt. Failed/DNF = 0 pts.",
-  },
-  Strands: {
-    emoji: '🧵',
-    description: 'Find themed words hidden in a letter grid, plus the bonus "spangram".',
-    scoring: 'No hints used = 5 pts, completed with hints = 3 pts, failed = 0 pts.',
+    scoring: 'Score = Yellow (1 pt) + Green (2 pts) + Blue (3 pts) + Purple (4 pts) − 1 pt per mistake, clamped between 0 and 10. You get up to 3 mistakes — a 4th ends the round and should be submitted as Failed (0 pts).',
   },
 };
 
@@ -239,13 +197,6 @@ const gameInfo = computed(() => GAME_INFO[selectedGame.value?.name] || {
 
 const effectiveRawResult = computed(() => {
   if (!selectedGame.value) return '';
-  if (selectedGame.value.name === 'Mini Crossword') {
-    if (crosswordFailed.value) return 'failed';
-    const m = String(crosswordMin.value).trim();
-    const s = String(crosswordSec.value).padStart(2, '0').slice(0, 2);
-    if (m === '' || crosswordSec.value === '') return '';
-    return `${m}:${s}`;
-  }
   if (selectedGame.value.name === 'Connections') {
     if (connectionsFailed.value) return 'failed';
     if (connectionsMistakes.value === '' || connectionsMistakes.value === null) return '';
@@ -271,9 +222,6 @@ const canSubmit = computed(() =>
 
 function onGameChange() {
   rawResult.value = '';
-  crosswordMin.value = '';
-  crosswordSec.value = '';
-  crosswordFailed.value = false;
   connectionsSolved.value = { yellow: false, green: false, blue: false, purple: false };
   connectionsMistakes.value = '';
   connectionsFailed.value = false;
@@ -329,9 +277,6 @@ async function submit() {
     // Reset form
     gameId.value = '';
     rawResult.value = '';
-    crosswordMin.value = '';
-    crosswordSec.value = '';
-    crosswordFailed.value = false;
     connectionsSolved.value = { yellow: false, green: false, blue: false, purple: false };
     connectionsMistakes.value = '';
     connectionsFailed.value = false;
