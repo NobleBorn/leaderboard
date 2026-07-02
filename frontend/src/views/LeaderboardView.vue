@@ -45,7 +45,6 @@
               </td>
               <td>
                 <strong>{{ row.name }}</strong>
-                <span v-if="row.rank === 1" style="margin-left:.4rem">👑</span>
               </td>
               <td>
                 <span class="badge badge-purple" style="font-size:.95rem">{{ row.totalPoints }}</span>
